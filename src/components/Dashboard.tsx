@@ -1,0 +1,61 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import type { ReminderDTO } from "@/lib/types";
+import NotificationBar from "@/components/NotificationBar";
+import Composer from "@/components/Composer";
+import ReminderList from "@/components/ReminderList";
+
+export default function Dashboard({ initial }: { initial: ReminderDTO[] }) {
+  const [reminders, setReminders] = useState<ReminderDTO[]>(initial);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/reminders", { cache: "no-store" });
+      if (res.ok) setReminders(await res.json());
+    } catch {
+      /* offline: dejamos lo que hay */
+    }
+  }, []);
+
+  // Polling suave: refleja recordatorios que el scheduler marcó como enviados.
+  useEffect(() => {
+    const t = setInterval(refresh, 20_000);
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refresh]);
+
+  async function handleDelete(id: string) {
+    setReminders((prev) => prev.filter((r) => r.id !== id)); // optimista
+    await fetch(`/api/reminders/${id}`, { method: "DELETE" }).catch(() => {});
+    refresh();
+  }
+
+  const pendingCount = reminders.filter((r) => r.sentAt === null).length;
+
+  return (
+    <main className="mx-auto w-full max-w-[620px] px-5 pt-12 pb-24 sm:pt-16">
+      <header className="mb-8">
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-lg" style={{ color: "var(--fg)" }}>
+            <span style={{ color: "var(--accent)" }}>~/</span>reminders
+            <span className="cursor" />
+          </h1>
+          <span className="text-[13px] tabular-nums" style={{ color: "var(--muted)" }}>
+            {pendingCount} pending
+          </span>
+        </div>
+      </header>
+
+      <NotificationBar />
+
+      <Composer onCreated={refresh} />
+
+      <ReminderList reminders={reminders} onDelete={handleDelete} />
+    </main>
+  );
+}
