@@ -1,114 +1,179 @@
 # ~/reminders
 
-App de recordatorios personal, mobile-first, con estética de terminal (claro/oscuro
-automático). Creás un recordatorio con fecha + descripción, lo ves en el dashboard, y
-recibís una **notificación push** cuando llega la hora — en la compu y, una vez
-instalada como PWA, en el iPhone. Todo detrás de un passcode simple (no es multiusuario).
+A minimal, **self-hostable** reminders app with a terminal aesthetic. Write a reminder
+with a date, see it on a dashboard, and get a **real push notification on your iPhone**
+(installed as a PWA) or desktop when it's due. No App Store, no Apple Developer account.
 
-Stack: Next.js 16 (App Router) · Prisma · Postgres (Neon) · Web Push (VAPID) · Tailwind v4 · Geist Mono.
+Each deploy is a **single-user, passcode-protected** instance — you host your own private
+reminders. Free to run on Vercel + Neon + GitHub Actions.
 
-**Producción:** https://self-recordatorios.vercel.app (Vercel + Neon Postgres +
-GitHub Actions como disparador del cron).
+```text
+  ~/reminders                                   3 pending
+
+  ● notifications on
+  ─────────────────────────────────────────────────────
+  $ new reminder…
+  @ 2026-07-03, 18:30                              [ add ]
+  ─────────────────────────────────────────────────────
+
+  ·  [2026-07-03 18:30]  in 3h
+     Renew the domain
+
+  ·  [2026-07-04 09:00]  in 1d
+     Call the dentist
+
+  — sent —
+  ✓  [2026-07-01 12:00]  sent
+     Pay rent
+```
+
+*Terminal-on-paper UI, automatic light/dark. Swipe a row left to delete.*
 
 ---
 
-## Correr en local
+## Features
 
-La base de datos es Postgres (Neon) tanto en local como en prod — no hay SQLite.
-Para desarrollar localmente necesitás el connection string real:
+- **Terminal aesthetic**, monospace, automatic light/dark (follows the OS).
+- **Reminders** = text + date/time, shown on a dashboard (pending / sent).
+- **Real push notifications** to an installed iPhone PWA and to desktop browsers.
+- **Single-user, passcode-gated** — your instance, your reminders, one password.
+- **Zero manual key setup** — Web Push (VAPID) keys are generated automatically.
+- **Free to run**: Vercel (hosting) + Neon (Postgres) + GitHub Actions (cron).
+
+## How it works
+
+A Next.js app on Vercel stores reminders in Postgres (Neon). A service worker shows the
+notifications; the VAPID keys needed for Web Push are generated on first use and stored in
+the database. Because Vercel's free plan only allows a **daily** cron, a **GitHub Action**
+pings `/api/cron/check` every 5 minutes to fire any due reminders. The whole app sits
+behind a single passcode.
+
+---
+
+## Deploy your own
+
+### 1. Click deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fnachodall%2Fself_recordatorios&env=APP_PASSWORD,CRON_SECRET&envDescription=APP_PASSWORD%20is%20your%20login%20passcode.%20CRON_SECRET%20is%20any%20random%20string%20used%20to%20authenticate%20the%20cron%20trigger.&project-name=reminders&repository-name=reminders)
+
+This clones the repo into your GitHub account and creates a Vercel project. When prompted,
+set:
+
+- **`APP_PASSWORD`** — the passcode you'll use to log in (pick something you can type on
+  your phone).
+- **`CRON_SECRET`** — any random string (e.g. run `openssl rand -hex 16`).
+
+### 2. Add the database
+
+In your new Vercel project → **Storage** → **Create Database** → **Neon (Postgres)** →
+connect it to the project. This injects `DATABASE_URL` automatically. Then **redeploy**
+(Deployments → ⋯ → Redeploy) so the build runs the schema migration against the new DB.
+
+### 3. Set up the cron (fires the notifications)
+
+The scheduler lives in [`.github/workflows/cron-check.yml`](.github/workflows/cron-check.yml)
+and pings your app every 5 minutes. In your forked GitHub repo:
+
+1. **Actions** tab → enable workflows (forks start with Actions disabled).
+2. **Settings → Secrets and variables → Actions** → add two repository secrets:
+   - **`APP_URL`** → your Vercel URL, e.g. `https://your-app.vercel.app`
+   - **`CRON_SECRET`** → the same value you set in Vercel
+3. (Optional) Actions tab → *Check reminders* → **Run workflow** to trigger it once.
+
+> Prefer not to use GitHub Actions? Any external cron works — e.g. [cron-job.org](https://cron-job.org)
+> making a `POST` to `https://your-app.vercel.app/api/cron/check` with header
+> `Authorization: Bearer <CRON_SECRET>`.
+
+### 4. Install on your iPhone (iOS 16.4+)
+
+1. Open your URL in **Safari** and enter your passcode.
+2. **Share** → **Add to Home Screen**.
+3. Open the app from the new icon → tap **`[ enable notifications ]`** → **Allow**.
+
+> iOS only lets a website request notification permission once it's installed as a PWA,
+> so step 2 must come before step 3.
+
+Create a reminder a couple of minutes out and confirm it arrives (it can take up to 5
+minutes, depending on the next GitHub Action tick).
+
+---
+
+## Local development
+
+The database is Postgres (Neon) in both dev and prod. Pull the connection string from your
+Vercel project:
 
 ```bash
+git clone https://github.com/nachodall/self_recordatorios reminders
+cd reminders
 npm install
-npx vercel link --yes --project self-recordatorios   # una vez
-npx vercel env pull .env.local                        # trae DATABASE_URL real
-npm run dev                                            # http://localhost:3000
+npx vercel link                 # link to your Vercel project
+npx vercel env pull .env.local  # brings DATABASE_URL, APP_PASSWORD, etc.
+npm run dev                     # http://localhost:3000
 ```
 
-En **otra terminal**, levantá el scheduler (es lo que dispara las notificaciones):
+In another terminal, run the scheduler (this is what fires notifications locally):
 
 ```bash
 npm run scheduler
 ```
 
-### Probar el circuito completo (en Chrome desktop)
+Web Push works on `localhost` in **Chrome/Edge desktop**, so you can test the full loop
+without an iPhone: log in → `[ enable notifications ]` → create a reminder ~1–2 min out →
+wait for the desktop notification. (Safari on `localhost` is unreliable for Web Push.)
 
-Web Push funciona en `localhost` en Chrome/Edge de escritorio, así que podés validar
-todo sin un iPhone:
+> `vercel env pull` returns Sensitive vars (like `APP_PASSWORD`) empty — fill those in
+> `.env.local` by hand.
 
-1. Abrí http://localhost:3000 → te pide el passcode (`APP_PASSWORD`).
-2. Click en **`[ enable notifications ]`** y aceptá el permiso.
-3. Creá un recordatorio con la hora ~1–2 minutos en el futuro y dale **add**.
-4. Dejá `npm run scheduler` corriendo. Cuando llegue la hora, aparece la notificación
-   del sistema y el recordatorio pasa a la sección **— sent —** (atenuado).
+## Environment variables
 
-> En **Safari** de escritorio el push web sobre `localhost` es poco confiable; usá
-> Chrome o Edge para probar local.
+See [`.env.example`](.env.example).
 
----
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `APP_PASSWORD` | ✅ | Login passcode; gates the whole app (page + API). |
+| `CRON_SECRET` | ✅ | Authenticates the cron trigger against `/api/cron/check`. |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | auto | Injected by the Neon integration on Vercel. |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | optional | Auto-generated and stored in the DB if unset. Set only to pin a keypair. |
+| `VAPID_SUBJECT` | optional | `mailto:` or URL used in the push payload. |
 
-## Comandos
+## Commands
 
-| Comando             | Qué hace                                             |
-| ------------------- | ----------------------------------------------------- |
-| `npm run dev`       | Dev server                                             |
-| `npm run scheduler` | Loop local que revisa recordatorios vencidos (30s)     |
-| `npm run build`     | Build de producción                                    |
-| `npm run db:studio` | Prisma Studio (ver/editar la base de datos)            |
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run scheduler` | Local loop that checks for due reminders (every 30s) |
+| `npm run build` | Production build |
+| `npm run db:studio` | Prisma Studio (inspect/edit the database) |
 
-## Variables de entorno
+## Tech stack
 
-Ver `.env.example`. En Vercel, `DATABASE_URL` / `DATABASE_URL_UNPOOLED` los inyecta
-automáticamente la integración de Neon (Storage → `neon-bistre-cable`). Las demás
-(`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`,
-`APP_PASSWORD`) se cargan a mano vía `vercel env add` o el dashboard.
+Next.js 16 (App Router) · Prisma · Postgres (Neon) · Web Push (VAPID) · Tailwind v4 · Geist Mono.
 
-- Claves VAPID: `npx web-push generate-vapid-keys`
-- `CRON_SECRET`: autentica al scheduler local / GitHub Action contra `/api/cron/check`
-- `APP_PASSWORD`: passcode que gatea toda la app (página + API)
+## Architecture
 
----
-
-## Deploy y notificaciones en el iPhone
-
-1. **Migraciones.** Corren solas en cada deploy: `vercel.json` define
-   `buildCommand: "npx prisma migrate deploy && npm run build"`, usando las env vars
-   que Vercel ya tiene cargadas — no hace falta correr nada a mano.
-2. **Cron real: GitHub Actions**, no Vercel Cron — el plan Hobby de Vercel sólo permite
-   cron *diario*, inservible para recordatorios puntuales.
-   [`.github/workflows/cron-check.yml`](.github/workflows/cron-check.yml) pega a
-   `/api/cron/check` cada 5 minutos. Necesita dos secrets en el repo de GitHub
-   (Settings → Secrets and variables → Actions):
-   - `APP_URL` → `https://self-recordatorios.vercel.app`
-   - `CRON_SECRET` → el mismo valor que en Vercel
-3. **Instalar la PWA en el iPhone** (iOS 16.4+):
-   Abrí la URL en **Safari** → ingresá el passcode → botón Compartir → **Agregar a
-   inicio** → abrí la app desde el ícono → tocá **`[ enable notifications ]`** y aceptá.
-   (En iOS el permiso de notificaciones sólo se puede dar desde la PWA instalada.)
-4. Creá un recordatorio y confirmá que la notificación llega (puede demorar hasta 5
-   minutos según el próximo tick del GitHub Action, o disparalo a mano desde la pestaña
-   Actions del repo con "Run workflow").
-
-## Arquitectura
-
-```
+```text
 src/app/
-  page.tsx                    Dashboard (server: carga inicial desde Prisma)
-  layout.tsx                  Fuente, metadata PWA, theme-color
-  globals.css                 Tema terminal claro/oscuro
-  login/page.tsx               Pantalla de passcode
+  page.tsx                        Dashboard (server: initial load from Prisma)
+  login/page.tsx                  Passcode screen
   api/
-    auth/login/route.ts        Valida el passcode y setea la cookie de sesión
-    reminders/route.ts         GET (listar) · POST (crear)
-    reminders/[id]/route.ts    DELETE
-    push/subscribe/route.ts    POST (guarda la suscripción del navegador)
-    cron/check/route.ts        Manda push de los vencidos y los marca como enviados
-src/proxy.ts                   Gatea toda la app detrás del passcode (cookie firmada)
-src/components/                Dashboard, Composer, ReminderList, NotificationBar
-src/lib/                       prisma, push (server), client-push, session, format, types
-public/sw.js                   Service worker (recibe push, muestra la notificación)
-public/manifest.webmanifest    Manifest de la PWA
-scripts/scheduler.mjs          Cron local para dev
-prisma/schema.prisma            Postgres (Neon), url + directUrl
-vercel.json                     buildCommand: migra y buildea en cada deploy
-.github/workflows/cron-check.yml  Cron real en producción (cada 5 min)
+    auth/login/route.ts           Validates the passcode, sets the session cookie
+    reminders/route.ts            GET (list) · POST (create)
+    reminders/[id]/route.ts       DELETE
+    push/subscribe/route.ts       Saves the browser's push subscription
+    push/vapid-public-key/route.ts  Returns the VAPID public key (env or DB)
+    cron/check/route.ts           Sends push for due reminders, marks them sent
+src/proxy.ts                      Gates the whole app behind the passcode (signed cookie)
+src/components/                   Dashboard, Composer, ReminderList, NotificationBar
+src/lib/                          prisma, push (env→DB→generate), client-push, session, format
+public/sw.js                      Service worker (receives push, shows the notification)
+public/manifest.webmanifest       PWA manifest
+prisma/schema.prisma              Postgres; Reminder, PushSubscription, AppSecret
+vercel.json                       buildCommand: migrate (when DB present) + build
+.github/workflows/cron-check.yml  Production cron (every 5 min)
+scripts/scheduler.mjs             Local cron for development
 ```
+
+## License
+
+[MIT](LICENSE)
