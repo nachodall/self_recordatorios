@@ -27,3 +27,13 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
 }
+
+// Fila singleton (id = 1) con las claves VAPID generadas en runtime.
+// Permite el self-hosting sin generar claves a mano: si no vienen por env,
+// la app las crea y las guarda acá en el primer uso.
+model AppSecret {
+  id           Int      @id @default(1)
+  vapidPublic  String
+  vapidPrivate String
+  createdAt    DateTime @default(now())
+}
