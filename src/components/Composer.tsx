@@ -33,6 +33,10 @@ export default function Composer({ onCreated }: { onCreated: () => void }) {
       setText("");
       setWhen(defaultDateTimeLocal());
       onCreated();
+    } catch {
+      // Fallo de red (ej. iPhone sin señal al tocar add): no lo tragamos en
+      // silencio — antes el recordatorio "desaparecía" sin dejar rastro.
+      setError("sin conexión — no se guardó, probá de nuevo");
     } finally {
       setBusy(false);
     }
