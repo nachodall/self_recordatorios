@@ -150,7 +150,7 @@ function Row({
       <div
         className={`swipe-reveal ${isDelete ? "is-delete" : "is-edit"} ${pastThreshold ? "past-threshold" : ""}`}
       >
-        <span>{isDelete ? "rm" : "edit"}</span>
+        <span>{isDelete ? "rm" : "vim"}</span>
       </div>
 
       <div
