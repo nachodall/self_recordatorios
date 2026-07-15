@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "~/reminders",
-  description: "Recordatorios personales con estética de terminal.",
+  description: "A self-hosted reminders app",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [

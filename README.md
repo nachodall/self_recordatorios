@@ -65,6 +65,13 @@ paste — nothing to write from scratch.
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fnachodall%2Fself_recordatorios&env=APP_PASSWORD,CRON_SECRET&envDescription=APP_PASSWORD%20is%20your%20login%20passcode.%20CRON_SECRET%20is%20any%20random%20string%20used%20to%20authenticate%20the%20cron%20trigger.&project-name=reminders&repository-name=reminders)
 
 This copies the code into your own GitHub account and starts creating a Vercel project.
+
+**Before clicking Deploy**, change the suggested project name (top of the import screen)
+to something with your name in it, e.g. **`self-reminders-yourusername`**. `reminders`
+alone is generic — Vercel will still accept it, but it makes the URL you get
+(`your-project-name.vercel.app`) memorable and unambiguously yours, especially if you
+ever need to tell a friend or troubleshoot it later.
+
 When it asks for environment variables, set:
 
 - **`APP_PASSWORD`** — the passcode you'll type to open the app. Pick something you're
