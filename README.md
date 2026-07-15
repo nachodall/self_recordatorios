@@ -110,11 +110,10 @@ clock on its own. **Use [cron-job.org](https://cron-job.org)** (free, no credit 
      - Value: `Bearer YOUR_CRON_SECRET` (the same string you set in step 1)
 3. Save. That's it — it'll ping your app every minute from now on.
 
-> A GitHub Actions workflow ([`.github/workflows/cron-check.yml`](.github/workflows/cron-check.yml))
-> is also included, but in practice GitHub only runs scheduled workflows on a
-> best-effort basis — in testing it fired anywhere from 5 minutes to 2 hours late.
-> **cron-job.org is the reliable option**; don't rely on GitHub Actions alone for
-> anything time-sensitive.
+> An earlier version of this project used a GitHub Actions workflow for this instead.
+> It's gone now — in practice GitHub only runs scheduled workflows on a best-effort
+> basis (in testing, anywhere from 5 minutes to 2 hours late), which isn't good enough
+> for reminders that need to fire on time.
 
 ### 4. Install it on your phone
 
@@ -209,7 +208,6 @@ public/sw.js                      Service worker (receives push, shows the notif
 public/manifest.webmanifest       PWA manifest
 prisma/schema.prisma              Postgres; Reminder, PushSubscription, AppSecret
 vercel.json                       buildCommand: migrate (when DB present) + build
-.github/workflows/cron-check.yml  Optional cron fallback (unreliable timing, see above)
 scripts/scheduler.mjs             Local cron for development
 ```
 
