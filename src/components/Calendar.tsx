@@ -10,6 +10,7 @@ const MONTHS = [
 ];
 const WEEKDAYS = ["mo", "tu", "we", "th", "fr", "sa", "su"];
 const MAX_DOTS = 5;
+const YEARS = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -33,6 +34,10 @@ export default function Calendar({ reminders }: { reminders: ReminderDTO[] }) {
   const year = view.getFullYear();
   const month = view.getMonth();
 
+  // Si el año navegado cae fuera del array, lo incluimos para que el <select>
+  // siempre tenga una opción válida seleccionada.
+  const yearOptions = YEARS.includes(year) ? YEARS : [year, ...YEARS].sort((a, b) => a - b);
+
   // Grilla de celdas: blancos de relleno + días del mes, completando semanas.
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7; // lunes = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -54,22 +59,45 @@ export default function Calendar({ reminders }: { reminders: ReminderDTO[] }) {
 
   return (
     <section>
-      {/* Navegación de mes */}
+      {/* Navegación de mes y año */}
       <div className="mb-5 flex items-center justify-between">
         <button className="cal-nav" onClick={() => shift(-1)} aria-label="previous month">
           ‹
         </button>
-        <button
-          className="text-[13px] tabular-nums"
-          style={{ color: "var(--fg)" }}
-          onClick={() => {
-            setView(startOfMonth(new Date()));
-            setSelected(null);
-          }}
-          title="jump to today"
-        >
-          {MONTHS[month]} {year}
-        </button>
+
+        <div className="flex items-baseline gap-2 text-[13px]">
+          <select
+            className="cal-select"
+            value={month}
+            onChange={(e) => {
+              setView(new Date(year, Number(e.target.value), 1));
+              setSelected(null);
+            }}
+            aria-label="month"
+          >
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            className="cal-select tabular-nums"
+            value={year}
+            onChange={(e) => {
+              setView(new Date(Number(e.target.value), month, 1));
+              setSelected(null);
+            }}
+            aria-label="year"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button className="cal-nav" onClick={() => shift(1)} aria-label="next month">
           ›
         </button>

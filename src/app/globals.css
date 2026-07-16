@@ -183,6 +183,20 @@ input[type="datetime-local"] {
   grid-template-columns: repeat(7, 1fr);
 }
 
+/* Selectores de mes / año: <select> sin chrome, se funden con el texto.
+   Mismo ancho fijo para los dos (cabe "september", el mes más largo). */
+.cal-select {
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+  color-scheme: light dark;
+  padding: 0;
+  width: 9.5ch;
+  text-align: center;
+}
+
 /* Botón de navegación de mes (‹ ›) */
 .cal-nav {
   background: transparent;
